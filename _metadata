@@ -1,0 +1,11 @@
+{
+  "author" : "Diam0voi",
+  "description" : "Adds randomly changing genius tips to the boot screen, just like AAA projects in my early childhood did",
+  "friendlyName" : "[oSB] Loading Screen AAA Gaming Tips",
+  "includes" : ["Arcana", "Shellguard Expansion ", "Project Redemption", "The Starforge v1.0", "Maple32", "Lostbound", "pat_techloadouts", "Elithian_Races_Mod", "Enhanced Storage"],
+  "link" : "steam://url/CommunityFilePage/3742480361",
+  "name" : "diam_AAALoadingTips",
+  "steamContentId" : "3742480361",
+  "tags" : "Miscellaneous|User Interface",
+  "version" : "2.0"
+}
