@@ -8,20 +8,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Prep folder structure
+        run: |
+          mkdir diam_AAALoadingTips
+          find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' ! -name 'diam_AAALoadingTips' -exec mv {} diam_AAALoadingTips/ \;
 
       - name: Archive Release
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
-          filename: 'MyGameMod-${{ github.ref_name }}.zip'
-          exclusions: '*.git* /*.gitignore README.md LICENSE'
+          filename: 'diam_AAALoadingTips-${{ github.ref_name }}.zip'
+          path: 'diam_AAALoadingTips'
+          exclusions: '*.git* /*.gitignore /*.gitattributes _previewimage README.md LICENSE'
 
       - name: Upload Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "MyGameMod-${{ github.ref_name }}.zip"
+          artifacts: "diam_AAALoadingTips-${{ github.ref_name }}.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
