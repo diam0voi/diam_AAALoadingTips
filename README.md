@@ -8,9 +8,10 @@ Half of all credits goes to genius Silver Sokolova!
 
 ## Features
 
-- **Loading Screen Integration:** Smooth, wrapped, and colorized tips fade in and out during the loading cinematic.
-- **In-Game Chat Command:** Anyone (including non-admins) can type `/tip` in chat to see a random tip from their pool.
-- **Dynamic Filtering:** Zero bloat. The pool automatically excludes tips from mods that aren't currently active.
+- **Loading Screen Integration:** Smooth, wrapped, and colorized tips fade in and out during the loading cinematic!
+- **In-Game Chat Command:** Anyone (including non-admins) can type `/tip` in chat to see a random tip from their pool!
+- **Every mod support:** Anyone can patch original config to add exclusive tips or updated already existed ones!
+- **Dynamic Filtering:** Zero bloat. The pool automatically excludes tips from mods that aren't currently active!
 - **Failsafe Design:** Safe checks that won't crash the script if a mod is uninstalled or if you are running on vanilla Starbound/other forks.
 
 ---
