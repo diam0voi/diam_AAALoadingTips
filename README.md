@@ -1,6 +1,6 @@
-# AAA Tips Framework for Starbound
+# [oSB] Loading Screen AAA Gaming Tips
 
-A lightweight, non-intrusive modding framework for OpenStarbound (and vanilla Starbound) that adds AAA-style, context-aware gaming tips to the loading screen. It also provides a non-admin `/tip` chat command so players can pull tips manually in-game.
+A lightweight, non-intrusive mod written using OpenStarbound framework for Starbound game that adds AAA-games stylished, context-aware gaming tips to the loading screen! It also provides a non-admin `/tip` chat command so players can pull tips manually in-game.
 
 The framework scans the player's active mod list dynamically. Players will only see tips for the mods they actually have installed.
 
