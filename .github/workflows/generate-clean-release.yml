@@ -18,6 +18,12 @@ jobs:
         run: |
           mkdir diam_AAALoadingTips
           find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' ! -name 'diam_AAALoadingTips' -exec mv {} diam_AAALoadingTips/ \;
+          
+          rm -rf diam_AAALoadingTips/_previewimage
+          rm -rf diam_AAALoadingTips/README.md
+          rm -rf diam_AAALoadingTips/LICENSE
+          rm -rf diam_AAALoadingTips/.gitignore
+          rm -rf diam_AAALoadingTips/.gitattributes
 
       - name: Archive Release
         uses: thedoctor0/zip-release@0.7.6
@@ -25,7 +31,6 @@ jobs:
           type: 'zip'
           filename: 'diam_AAALoadingTips-${{ github.ref_name }}.zip'
           path: 'diam_AAALoadingTips'
-          exclusions: '*.git* /*.gitignore /*.gitattributes _previewimage README.md LICENSE'
 
       - name: Upload Release
         uses: ncipollo/release-action@v1
