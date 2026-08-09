@@ -1,0 +1,23 @@
+ignore_merge_commits = true
+from_latest_tag = true
+branch_whitelist = ["main"]
+skip_ci = "[skip ci]"
+post_bump_hooks = [
+  "git tag -f v{{version.major}} v{{version}}",
+  "git tag -f v{{version.major}}.{{version.minor}} v{{version}}",
+  "git push",
+  "git push --tags -f",
+]
+
+[commit_types]
+chore = { omit_from_changelog = true }
+
+[changelog]
+path = "CHANGELOG.md"
+remote = "github.com"
+repository = "diam_AAALoadingTips"
+owner = "diam0voi"
+authors = [
+    { signature = "Ostap Baranov", username = "diam0voi" },
+    { signature = "80606782+SilverSokolova@users.noreply.github.com", username = "SilverSokolova" },
+]
