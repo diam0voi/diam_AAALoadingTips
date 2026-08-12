@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+      inputs:
+        publish_release:
+          description: 'Upload artefact as a release afterby?'
+          required: true
+          default: false
+          type: boolean
 
 jobs:
   build:
@@ -12,27 +19,32 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prep folder structure
         run: |
           mkdir diam_AAALoadingTips
           find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' ! -name 'diam_AAALoadingTips' -exec mv {} diam_AAALoadingTips/ \;
-          
-          rm -rf diam_AAALoadingTips/_previewimage
-          rm -rf diam_AAALoadingTips/README.md
-          rm -rf diam_AAALoadingTips/LICENSE
-          rm -rf diam_AAALoadingTips/.gitignore
-          rm -rf diam_AAALoadingTips/.gitattributes
 
-      - name: Archive Release
+          rm -f diam_AAALoadingTips/_previewimage
+          rm -f diam_AAALoadingTips/README.md
+          rm -f diam_AAALoadingTips/LICENSE
+          rm -f diam_AAALoadingTips/.gitignore
+          rm -f diam_AAALoadingTips/.gitattributes
+          rm -f diam_AAALoadingTips/cog.toml
+          rm -f diam_AAALoadingTips/.pre-commit-config.yaml
+
+      - name: Create artifact for release
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
           filename: 'diam_AAALoadingTips-${{ github.ref_name }}.zip'
           path: 'diam_AAALoadingTips'
 
-      - name: Upload Release
+      - name: Upload release
+        if: |
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_release == 'true')
         uses: ncipollo/release-action@v1
         with:
           artifacts: "diam_AAALoadingTips-${{ github.ref_name }}.zip"

@@ -174,6 +174,16 @@ function buildTipPool()
 			-- free auto-alias for consistency
 			aliasesMap[string.lower(modKey)] = modKey
 			table.insert(currentAliases, string.lower(modKey))
+
+			-- then config scraper
+			if mod.aliases and type(mod.aliases) == "table" then
+				for _, alias in ipairs(mod.aliases) do
+					local lAlias = string.lower(alias)
+					aliasesMap[lAlias] = modKey
+					table.insert(currentAliases, lAlias)
+				end
+			end
+
 			modAliases[modKey] = currentAliases
 
 			-- formatting
