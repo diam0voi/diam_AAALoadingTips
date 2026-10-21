@@ -10,7 +10,6 @@ It is a small project, so only a few components are utilized to keep things clea
 - `scripts/aaatips_command.lua`: `/tip` chat command logic;
 - `player.config.patch`: makes the command available for players;
 - `.github/workflows/generate-clean-release.yml`: current ci/cd;
-- `cog.toml`: changelog builder;
 - `.pre-commit-config.yaml`: local lint/format hooks.
 
 ---
@@ -49,37 +48,7 @@ fix(tips): correct 67 typos in the base game tips
 #### (Optional): interactive Conventional Commit message wizard
 
 There is actually no need to keep specification on your screen while writing a message.
-You can simply install [koji](https://github.com/cococonscious/koji) (recommended, 0 dependencies) or [commitizen](https://github.com/commitizen/cz-cli) and use it to create true Conventional Commit messages without losing any speed and having to remember the rules!
-
-<details>
-<summary>IMPORTANT: Git for Windows + koji compatibility (Actual as of 2026.08.10) <--click on me</summary>
-
-Due to koji using Windows-nonfriendly `cocogitto` utility core (no proper shebangs mapping i guess), you may need a custom hook to make it work with `prek`/`pre-commit`.
-
-Save the following script as `.git/hooks/prepare-commit-msg` file:
-
-```bash
-#!/bin/bash
-
-# skip on amends, merges, and default git commit -m
-COMMIT_SOURCE=$2
-if [ "$COMMIT_SOURCE" = "commit" ] || [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "message" ]; then
-    exit 0
-fi
-
-exec < /dev/tty
-koji --hook || true
-```
-
-Then run:
-
-```bash
-chmod +x .git/hooks/prepare-commit-msg
-```
-
-Check if it works by `git commit`.
-
-</details>
+You can simply install [concom](https://github.com/agarleanu/concom) (recommended, 0 dependencies) or [commitizen](https://github.com/commitizen/cz-cli) and use it to create true Conventional Commit messages without losing any speed and having to remember the rules!
 
 ## Release preview with CI/CD
 
@@ -92,3 +61,4 @@ A GitHub Actions workflow creates a clean release zip containing only the mod fi
 ## Questions?
 
 Feel free to open an issue or use any other way to contact me!
+And no, it is not overengineered, i swear  
