@@ -16,7 +16,7 @@ Half of all credits goes to genius [SilverSokolova](https://github.com/SilverSok
 
 Below is the list of built-in short names and aliases you can use with the `/tip <category>` command.
 
-There is also always a `mod name lowercase` auto-alias for convenience, e.g. `ancient cosmos`.
+There is also always a `mod name lowercase` auto-alias for convenience, e.g. `project redemption`.
 
 | Mod Name | Supported Aliases |
 | :--- | :--- |
@@ -49,7 +49,7 @@ In case you don't wanna install it from Steam:
 
 ## YOUR OWN TIPS!
 
-This stuff is built to be mod-friendly. You **don't** need to ask to make your mod supported; you can simply patch your tips into by yourself!
+This project is built to be mod-friendly. You **don't** need to ask to make your mod supported; you can simply patch your tips into by yourself! Or feel free to suggest some
 
 #### Patch example
 
@@ -74,11 +74,13 @@ Create a file named `splash_tips.config.patch` in your mod's root directory and 
 ]
 ```
 
-Then, in your `_metadata` file, write this line at the end:
+Then, in your `_metadata` file, add this line at the end:
 
 ```json
 "includes" : ["diam_AAALoadingTips"]
 ```
+
+(don't forget the other lines as well lol)
 
 ### Configuration values info
 
@@ -90,7 +92,7 @@ Then, in your `_metadata` file, write this line at the end:
 
 ### Overriding existing stuff
 
-Because the mod loads after other, you can easily create `replace` patches to customize other mods' configurations or add new aliases to them in one patch.
+You can easily create `replace` patches to customize other mods' configurations or add new aliases to them in one patch.
 
 ```json
 [
@@ -114,7 +116,6 @@ Because the mod loads after other, you can easily create `replace` patches to cu
 │   .gitattributes
 │   .gitignore
 │   .pre-commit-config.yaml
-│   cog.toml
 │   CONTRIBUTING.md
 │   LICENSE
 │   player.config.patch
