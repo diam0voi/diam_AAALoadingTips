@@ -83,7 +83,7 @@ Then, in your `_metadata` file, write this line at the end:
 ### Configuration values info
 
 - **`checkPath`** (Required!): *String*, A unique asset path (can be a `.species`, `.object`, `.png`, etc.) to check if *the mod for which the tips are written is installed* on the player's side;
-- **`color`** (Optional): *String*, 6-digit hex code to automatically apply plane color to your mod's name;
+- **`color`** (Optional): *String*, hex code to automatically apply plane color to your mod's name;
 - **`specialName`** (Optional): *String*, a high-priority key that **overrides** the `color` property! Use this if you want to make every letter colorful using Starbound carets (like `"specialName": "^#D19B31;Ar^#AB544B;ca^#8A8CBF;na^reset;"`) or change the mod's name appearance;
 - **`aliases`** (Optional): *Array of strings*, shortnames for players to type into the `/tip <name>` command;
 - **`tips`** (Optional): *Array of strings*, tips supports Starbound inline caret colors! Keep them under ~120 characters for clean wrapping on loading screens.
