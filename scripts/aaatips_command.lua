@@ -1,116 +1,136 @@
 local tipPool = nil
+local activeCategories = nil
 local categoryPools = nil
 local aliasesMap = nil
 local modAliases = nil
+local tipBags = nil
+local lastDrawn = nil
+local balanceCategories = true
+local rng = nil
 
--- only allow default named colors, hex colors, and ^reset to avoid glitches
-local function scrubOsbTags(text)
-	return text:gsub("%^([^;]+);", function(tag)
-		local lTag = string.lower(tag)
-		if lTag:sub(1, 1) == "#" then
-			return "^" .. tag .. ";"
-		end
+local validTags = {
+	reset = true,
+	black = true,
+	white = true,
+	red = true,
+	green = true,
+	blue = true,
+	yellow = true,
+	cyan = true,
+	magenta = true,
+	orange = true,
+	pink = true,
+	gray = true,
+	grey = true,
+}
 
-		local validTags = {
-			reset = true,
-			black = true,
-			white = true,
-			red = true,
-			green = true,
-			blue = true,
-			yellow = true,
-			cyan = true,
-			magenta = true,
-			orange = true,
-			pink = true,
-			gray = true,
-			grey = true,
-		}
-		if validTags[lTag] then
-			return "^" .. tag .. ";"
-		end
+local reservedCommands = {
+	help = true,
+	["?"] = true,
+	aliases = true,
+	reload = true,
+}
 
-		return ""
-	end)
+local nonJsonExts = {
+	png = true,
+	mp3 = true,
+	ogg = true,
+	wav = true,
+	lua = true,
+	ttf = true,
+	otf = true,
+	txt = true,
+	md = true,
+}
+
+local function trim(str)
+	return (str:match("^%s*(.-)%s*$"))
 end
 
-function init() -- hook into chat
-	message.setHandler("/tip", function(_, _, args)
-		if not tipPool then
-			buildTipPool()
+local function randInt(minVal, maxVal)
+	if not rng and sb and sb.makeRandomSource then
+		rng = sb.makeRandomSource()
+	end
+	if rng then
+		return minVal + (rng:randu32() % (maxVal - minVal + 1))
+	end
+	return math.random(minVal, maxVal)
+end
+
+local function drawFromBag(bagKey, pool)
+	if not pool or #pool == 0 then
+		return nil
+	end
+	if #pool == 1 then
+		return pool[1]
+	end
+
+	local bag = tipBags[bagKey]
+	if not bag or #bag == 0 then
+		bag = {}
+		for i = 1, #pool do
+			bag[i] = pool[i]
 		end
-
-		if #tipPool == 0 then
-			return "No tips available."
+		for i = #bag, 2, -1 do
+			local j = randInt(1, i)
+			bag[i], bag[j] = bag[j], bag[i]
 		end
-
-		args = (args and type(args) == "string") and args:match("^%s*(.-)%s*$") or ""
-
-		if args == "" then -- default behavior
-			return tipPool[math.random(#tipPool)]
+		-- prevent previous tip reshuffle repeating
+		if lastDrawn[bagKey] and bag[#bag] == lastDrawn[bagKey] then
+			bag[1], bag[#bag] = bag[#bag], bag[1]
 		end
+		tipBags[bagKey] = bag
+	end
 
-		local lowerArgs = string.lower(args)
+	local picked = table.remove(bag)
+	lastDrawn[bagKey] = picked
+	return picked
+end
 
-		-- information
-		if lowerArgs == "help" then
-			local available = { "vanilla" }
-			for modKey, pool in pairs(categoryPools) do
-				if modKey ~= "vanilla" and #pool > 0 then
-					table.insert(available, modKey)
+-- only named colors, 3/4/6/8-char hex colors, ^reset w/o eatin across ';'
+local function scrubOsbTags(text)
+	return (
+		text:gsub("%^([^;%s]+);", function(tag)
+			local lTag = string.lower(tag)
+			if lTag:match("^#%x+$") then
+				local len = #lTag - 1
+				if len == 3 or len == 4 or len == 6 or len == 8 then
+					return "^" .. tag .. ";"
 				end
 			end
-			table.sort(available)
-			return "Available categories: ^green;"
-				.. table.concat(available, "^reset;, ^green;")
-				.. "^reset;\nType ^cyan;/tip <category>^reset; for a random tip, ^cyan;/tip^reset; for any.\nType ^cyan;/tip aliases^reset; to see category aliases."
-		end
-
-		-- more information lmfao
-		if lowerArgs == "aliases" then
-			local lines = {}
-			local sortedKeys = {}
-
-			for modKey in pairs(modAliases) do
-				if modKey ~= "vanilla" then
-					table.insert(sortedKeys, modKey)
-				end
+			if validTags[lTag] then
+				return "^" .. tag .. ";"
 			end
-			table.sort(sortedKeys)
+			return ""
+		end)
+	)
+end
 
-			-- force base game to be at the top
-			if modAliases["vanilla"] then
-				table.insert(lines, "^green;Vanilla^reset;: " .. table.concat(modAliases["vanilla"], ", "))
-			end
-
-			-- add the rest alphabetically
-			for _, modKey in ipairs(sortedKeys) do
-				table.insert(lines, "^green;" .. modKey .. "^reset;: " .. table.concat(modAliases[modKey], ", "))
-			end
-
-			return table.concat(lines, ";\n") .. "."
-		end
-
-		-- lookup in aliases hashmap
-		local targetCategory = aliasesMap[lowerArgs]
-
-		if targetCategory and categoryPools[targetCategory] and #categoryPools[targetCategory] > 0 then
-			local pool = categoryPools[targetCategory]
-			return pool[math.random(#pool)]
-		else
-			return "Unknown category: ^orange;" .. args .. "^reset;! Type ^cyan;/tip help^reset; for a list."
-		end
-	end)
+local function stripOsbTags(text)
+	if sb and sb.stripEscapeCodes then
+		return sb.stripEscapeCodes(text)
+	end
+	return (text:gsub("%^[^;%s]+;", ""))
 end
 
 local function isModInstalled(checkPath)
-	if not checkPath then
+	if type(checkPath) ~= "string" then
 		return false
+	end
+	checkPath = trim(checkPath)
+	if checkPath == "" then
+		return false
+	end
+	if checkPath == "*" then
+		return true
+	end
+	if checkPath:sub(1, 1) ~= "/" then
+		checkPath = "/" .. checkPath
 	end
 
 	if root.assetsScan then
 		local ok, list = pcall(root.assetsScan, checkPath)
-		if ok and type(list) == "table" and #list > 0 then
+		if ok and type(list) == "table" then
 			for _, path in ipairs(list) do
 				if path == checkPath then
 					return true
@@ -120,88 +140,278 @@ local function isModInstalled(checkPath)
 		return false
 	end
 
-	-- direct pass prevents cpp exception wrapper bullshitto
-	local isJson = checkPath:match("%.%w+$")
-		and not (checkPath:match("%.png$") or checkPath:match("%.ogg$") or checkPath:match("%.wav$"))
+	-- vanilla fallback w/o assetsScan
+	local ext = checkPath:match("%.([^./]+)$")
+	ext = ext and string.lower(ext) or ""
 
-	if isJson then
-		local ok, res = pcall(root.assetJson, checkPath)
-		if ok and type(res) == "table" and next(res) ~= nil and not res.exception and not res.error then
-			return true -- ensures the return isnt an engine error container masqueradin as a valid table
-		end
-	else
+	if ext == "png" then
 		local ok, res = pcall(root.imageSize, checkPath)
-		if ok and type(res) == "table" and res[1] and res[1] > 0 then
-			return true
-		end
+		return ok and type(res) == "table" and type(res[1]) == "number" and res[1] > 0
+	end
+
+	if ext ~= "" and not nonJsonExts[ext] then
+		local ok, res = pcall(root.assetJson, checkPath)
+		-- if it isnt an engine error container...
+		return ok and type(res) == "table" and next(res) ~= nil and not res.exception and not res.error
 	end
 
 	return false
 end
 
-function buildTipPool()
-	tipPool = {}
-	categoryPools = { vanilla = {} }
-	aliasesMap = {}
-	modAliases = {}
-
-	local configOk, config = pcall(root.assetJson, "/splash_tips.config")
-	if not configOk or type(config) ~= "table" then
+local function registerAlias(rawAlias, targetKey, targetList, seenLocal)
+	if type(rawAlias) ~= "string" then
+		return
+	end
+	local lAlias = string.lower(trim(rawAlias))
+	if lAlias == "" or reservedCommands[lAlias] or seenLocal[lAlias] then
+		return
+	end
+	if aliasesMap[lAlias] then
+		if aliasesMap[lAlias] ~= targetKey and sb and sb.logWarn then
+			sb.logWarn(
+				"[Tips] Alias '%s' for '%s' ignored (already claimed by '%s')",
+				lAlias,
+				targetKey,
+				aliasesMap[lAlias]
+			)
+		end
 		return
 	end
 
-	local vanillaAliases = config.vanillaAliases or { "vanilla", "base" }
-	modAliases["vanilla"] = {}
-	for _, alias in ipairs(vanillaAliases) do
-		local lAlias = string.lower(alias)
-		aliasesMap[lAlias] = "vanilla"
-		table.insert(modAliases["vanilla"], lAlias)
+	seenLocal[lAlias] = true
+	aliasesMap[lAlias] = targetKey
+	table.insert(targetList, lAlias)
+end
+
+local function buildTipPool()
+	tipPool = {}
+	activeCategories = {}
+	categoryPools = {}
+	aliasesMap = {}
+	modAliases = {}
+	tipBags = {}
+	lastDrawn = {}
+
+	local configOk, config = pcall(root.assetJson, "/splash_tips.config")
+	if not configOk or type(config) ~= "table" then
+		if sb and sb.logWarn then
+			sb.logWarn("[Tips] Failed to load /splash_tips.config")
+		end
+		return
 	end
 
-	for _, tip in ipairs(config.vanillaTips or {}) do
-		local formattedTip = scrubOsbTags("Tip: " .. tip)
-		table.insert(tipPool, formattedTip)
-		table.insert(categoryPools.vanilla, formattedTip)
-	end
+	balanceCategories = (config.balanceCategories ~= false)
 
-	local modTipsData = config.modTipsData or {}
-
-	for modKey, mod in pairs(modTipsData) do
-		if isModInstalled(mod.checkPath) then
-			categoryPools[modKey] = {}
-			local currentAliases = {}
-
-			-- free auto-alias for consistency
-			aliasesMap[string.lower(modKey)] = modKey
-			table.insert(currentAliases, string.lower(modKey))
-
-			-- then config scraper
-			if mod.aliases and type(mod.aliases) == "table" then
-				for _, alias in ipairs(mod.aliases) do
-					local lAlias = string.lower(alias)
-					aliasesMap[lAlias] = modKey
-					table.insert(currentAliases, lAlias)
+	-- vanilla pool
+	local vanillaPool = {}
+	local seenVanilla = {}
+	if type(config.vanillaTips) == "table" then
+		for _, tip in ipairs(config.vanillaTips) do
+			if type(tip) == "string" then
+				local cleaned = trim(tip)
+				if cleaned ~= "" then
+					local normKey = string.lower(trim(stripOsbTags(cleaned)))
+					if normKey ~= "" and not seenVanilla[normKey] then
+						seenVanilla[normKey] = true
+						local formattedTip = scrubOsbTags("Tip: " .. cleaned)
+						table.insert(tipPool, formattedTip)
+						table.insert(vanillaPool, formattedTip)
+					end
 				end
-			end
-
-			modAliases[modKey] = currentAliases
-
-			-- formatting
-			local coloredspecialName
-			if mod.specialName then -- unified coloring logic
-				coloredspecialName = mod.specialName
-			else
-				local colorHex = mod.color or "ffffff"
-				coloredspecialName = "^#" .. colorHex .. ";" .. modKey .. "^reset;"
-			end
-
-			local prefix = "Tip (" .. coloredspecialName .. "): "
-
-			for _, tip in ipairs(mod.tips or {}) do
-				local finalTip = scrubOsbTags(prefix .. tip)
-				table.insert(tipPool, finalTip)
-				table.insert(categoryPools[modKey], finalTip)
 			end
 		end
 	end
+
+	if #vanillaPool > 0 then
+		categoryPools["vanilla"] = vanillaPool
+		table.insert(activeCategories, "vanilla")
+
+		local vAliases = {}
+		local seenVAliases = {}
+		local rawVanillaAliases = (type(config.vanillaAliases) == "table") and config.vanillaAliases
+			or { "vanilla", "base" }
+		for _, alias in ipairs(rawVanillaAliases) do
+			registerAlias(alias, "vanilla", vAliases, seenVAliases)
+		end
+		registerAlias("vanilla", "vanilla", vAliases, seenVAliases)
+		modAliases["vanilla"] = vAliases
+	end
+
+	-- sort mod keys so alias priority is determined
+	local modTipsData = (type(config.modTipsData) == "table") and config.modTipsData or {}
+	local sortedModKeys = {}
+	for modKey in pairs(modTipsData) do
+		if type(modKey) == "string" then
+			if string.lower(modKey) == "vanilla" then
+				if sb and sb.logWarn then
+					sb.logWarn("[Tips] Ignoring modTipsData key '%s' (reserved for base game)", modKey)
+				end
+			else
+				table.insert(sortedModKeys, modKey)
+			end
+		end
+	end
+	table.sort(sortedModKeys)
+
+	for _, modKey in ipairs(sortedModKeys) do
+		local mod = modTipsData[modKey]
+		if type(mod) == "table" and (mod.alwaysActive == true or isModInstalled(mod.checkPath)) then
+			local coloredName
+			if type(mod.specialName) == "string" and trim(mod.specialName) ~= "" then
+				coloredName = mod.specialName .. "^reset;"
+			else
+				local colorHex = type(mod.color) == "string" and trim(mod.color):gsub("^#", "") or "ffffff"
+				local hexLen = #colorHex
+				if not colorHex:match("^%x+$") or (hexLen ~= 3 and hexLen ~= 4 and hexLen ~= 6 and hexLen ~= 8) then
+					colorHex = "ffffff"
+				end
+				coloredName = "^#" .. colorHex .. ";" .. modKey .. "^reset;"
+			end
+
+			local prefix = "Tip (" .. coloredName .. "): "
+			local modPool = {}
+			local seenMod = {}
+
+			if type(mod.tips) == "table" then
+				for _, tip in ipairs(mod.tips) do
+					if type(tip) == "string" then
+						local cleaned = trim(tip)
+						if cleaned ~= "" then
+							local normKey = string.lower(trim(stripOsbTags(cleaned)))
+							if normKey ~= "" and not seenMod[normKey] then
+								seenMod[normKey] = true
+								table.insert(modPool, scrubOsbTags(prefix .. cleaned))
+							end
+						end
+					end
+				end
+			end
+
+			-- do not register crap
+			if #modPool > 0 then
+				for _, finalTip in ipairs(modPool) do
+					table.insert(tipPool, finalTip)
+				end
+				categoryPools[modKey] = modPool
+				table.insert(activeCategories, modKey)
+
+				local currentAliases = {}
+				local seenAliases = {}
+				registerAlias(modKey, modKey, currentAliases, seenAliases)
+				if type(mod.aliases) == "table" then
+					for _, alias in ipairs(mod.aliases) do
+						registerAlias(alias, modKey, currentAliases, seenAliases)
+					end
+				end
+
+				if #currentAliases > 0 then
+					modAliases[modKey] = currentAliases
+				end
+			end
+		end
+	end
+
+	if sb and sb.logInfo then
+		sb.logInfo("[Tips] Loaded %s tips across %s categories", #tipPool, #activeCategories)
+	end
+end
+
+function init() -- hook into chat
+	message.setHandler("/tip", function(_, _, ...)
+		if not tipPool then
+			buildTipPool()
+		end
+
+		local argParts = {}
+		for i = 1, select("#", ...) do
+			local v = select(i, ...)
+			if type(v) == "string" then
+				local t = trim(v)
+				if t ~= "" then
+					table.insert(argParts, t)
+				end
+			end
+		end
+		local args = table.concat(argParts, " ")
+		local lowerArgs = string.lower(args)
+
+		if lowerArgs == "reload" then
+			buildTipPool()
+			if #tipPool == 0 then
+				return "Reloaded pool, but no tips were found!"
+			end
+			return string.format(
+				"Reloaded ^green;%d^reset; tips across ^green;%d^reset; categories.",
+				#tipPool,
+				#activeCategories
+			)
+		end
+
+		if #tipPool == 0 then
+			return "No tips were found!"
+		end
+
+		if args == "" then
+			if balanceCategories then
+				local cat = drawFromBag("__categories__", activeCategories)
+				return drawFromBag(cat, categoryPools[cat])
+			end
+			return drawFromBag("__all__", tipPool)
+		end
+
+		if lowerArgs == "help" or lowerArgs == "?" then
+			local available = {}
+			for _, cat in ipairs(activeCategories) do
+				table.insert(available, cat)
+			end
+			table.sort(available, function(a, b)
+				if a == "vanilla" then
+					return true
+				end
+				if b == "vanilla" then
+					return false
+				end
+				return string.lower(a) < string.lower(b)
+			end)
+			return "Available categories: ^green;"
+				.. table.concat(available, "^reset;, ^green;")
+				.. "^reset;\nType ^cyan;/tip <category>^reset; for a random tip, ^cyan;/tip^reset; for any,\n ^cyan;/tip aliases^reset; for aliases list or ^cyan;/tip reload^reset; for debuggie :3"
+		end
+
+		if lowerArgs == "aliases" then
+			local lines = {}
+			local sortedKeys = {}
+
+			for modKey in pairs(modAliases) do
+				if modKey ~= "vanilla" then
+					table.insert(sortedKeys, modKey)
+				end
+			end
+			table.sort(sortedKeys, function(a, b)
+				return string.lower(a) < string.lower(b)
+			end)
+
+			if modAliases["vanilla"] then
+				table.insert(lines, "^green;Vanilla^reset;: " .. table.concat(modAliases["vanilla"], ", "))
+			end
+
+			for _, modKey in ipairs(sortedKeys) do
+				table.insert(lines, "^green;" .. modKey .. "^reset;: " .. table.concat(modAliases[modKey], ", "))
+			end
+
+			if #lines == 0 then
+				return "No category aliases available!"
+			end
+
+			return table.concat(lines, ";\n") .. "."
+		end
+
+		local targetCategory = aliasesMap[lowerArgs]
+		if targetCategory and categoryPools[targetCategory] then
+			return drawFromBag(targetCategory, categoryPools[targetCategory])
+		end
+
+		local safeArgs = stripOsbTags(args):gsub("%^", "")
+		return "Unknown category: ^orange;" .. safeArgs .. "^reset;! Type ^cyan;/tip help^reset; for a list."
+	end)
 end

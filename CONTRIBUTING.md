@@ -19,13 +19,13 @@ It is a small project, so only a few components are utilized to keep things clea
 This repo uses local pre-commit git hooks to automate all the boring processes, including formatting!
 
 To enable them locally:
-1. Install [prek](https://github.com/j178/prek) (recommended, 0 dependencies) or [pre-commit](https://github.com/pre-commit/pre-commit) CLI utility by whichever way you prefer, so that your OS can detect it;
+1. Install CLI utility [prek](https://github.com/j178/prek) (recommended, 0 dependencies) or [pre-commit](https://github.com/pre-commit/pre-commit) by whichever way you prefer, so that your OS can detect it;
 2. Activate the hooks from any terminal shell by running command in the repo root:
    - for `prek`: `prek install`
    - for `pre-commit`: `pre-commit install`
 3. Hooks will now run automatically on each git commit or manually on `prek`/`pre-commit` command.
 
-> If you use `pre-commit` and the commit-msg hook is missing, run:
+> If you use `pre-commit` and the commit-msg hook is missing, run this in your shell:
 > `pre-commit install --hook-type commit-msg`
 
 ### Code style and validation
@@ -61,4 +61,4 @@ A GitHub Actions workflow creates a clean release zip containing only the mod fi
 ## Questions?
 
 Feel free to open an issue or use any other way to contact me!
-And no, it is not overengineered, i swear  
+And no, it is not overengineered, i swear
