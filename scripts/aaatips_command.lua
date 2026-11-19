@@ -33,12 +33,15 @@ local reservedCommands = {
 
 local nonJsonExts = {
 	png = true,
+	jpg = true,
+	jpeg = true,
+	webm = true,
 	mp3 = true,
 	ogg = true,
 	wav = true,
 	lua = true,
-	ttf = true,
-	otf = true,
+	config = true,
+	patch = true,
 	txt = true,
 	md = true,
 }
