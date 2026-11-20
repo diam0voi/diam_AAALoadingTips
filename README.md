@@ -1,6 +1,6 @@
 # [oSB] Loading Screen AAA Gaming Tips
 
-A lightweight, non-intrusive mod written using OpenStarbound framework for the Starbound game that adds AAA-games stylished tips to the loading screen! It also provides a non-admin `/tip` chat command so players can pull tips manually in-game.
+A lightweight, non-intrusive mod written using OpenStarbound framework for the Starbound game that adds AAA-games stylished tips to the loading screen! It also provides a non-admin `/tip` chat command so players can pull tips manually.
 
 Half of all credits goes to genius [SilverSokolova](https://github.com/SilverSokolova)!
 
@@ -9,18 +9,28 @@ Half of all credits goes to genius [SilverSokolova](https://github.com/SilverSok
 - **Animated tips during loading (currenly only on game boot);**
 - **In-game chat command:** it works even without oSB and has 4 attributes: type `/tip ` or `/tip <category>` to get random tip, `/tip aliases` to get the full list of what`<category>` thing understands, `/tip reload` to rebuilt the tips pool if you debugging, and `/tip ?` or `/tip help` to get a reminder + list of mods with tips;
 - **Failsafe design:** there are lots of safety checks that *won't let the game crash* or spam *useless* info in logs if something goes wrong or if you're running on default Starbound/heavy modpacks;
-- **Dynamic filtering:** the tips pool *automatically* excludes tips from mods that aren't currently active or were done incorrect, zero bloat;
+- **Dynamic filtering:** final pool *automatically* excludes tips from mods that aren't currently active or when some tips were done incorrect, zero bloat;
 - **Every mod support:** Anyone can patch tips config to add exclusive tips or change something.
 
-### Active Mod Aliases
+### Manual installation from GitHub
 
-Below is the list of built-in short names and aliases you can use with the `/tip <category>` command.
+In case you dont wanna install it from Steam:
 
-There is also always a `mod name lowercase` auto-alias for convenience, e.g. `project redemption`.
+1. Download the latest .zip release.
+2. Place the unpacked folder inside your Starbound `mods` directory:
+   `.../Starbound/mods/`
+
+---
+
+## Aliases
+
+Below is the list of aliases you can use with the `/tip <category>` command as a demo, but thats not all, check `/tip aliases`!
+
+There is always a `mod name` auto-alias for convenience, e.g. `project redemption`.
 
 | Mod Name | Supported Aliases |
 | :--- | :--- |
-| **Base game** | `v`, `base`, `game`, `vanilla`, `original`, `official`, `starbound` |
+| **Base game** | `v`, `base`, `vanilla`, `official`, `starbound` |
 | **Arcana** | `arcn` |
 | **Shellguard Expansion** | `sg`, `sge`, `shellguard` |
 | **Project Redemption** | `pr`, `redemption` |
@@ -35,15 +45,6 @@ There is also always a `mod name lowercase` auto-alias for convenience, e.g. `pr
 | **Enhanced Storage** | `storage` |
 | **Raiizy's Forge** | `rf`, `raiizyforge` |
 | **Frackin' Universe** | `fu` |
-
----
-
-## Manual installation from GitHub
-In case you don't wanna install it from Steam:
-
-1. Download the latest .zip release.
-2. Place the unpacked folder inside your Starbound `mods` directory:
-   `.../Starbound/mods/`
 
 ---
 
@@ -84,15 +85,22 @@ Then, in your `_metadata` file, add this line at the end:
 
 ### Configuration values info
 
-- **`checkPath`** (Required!): *String*, A unique asset path (can be a `.species`, `.object`, `.png`, etc.) to check if *the mod for which the tips are written is installed* on the player's side;
-- **`color`** (Optional): *String*, hex code to automatically apply plane color to your mod's name;
-- **`specialName`** (Optional): *String*, a high-priority key that **overrides** the `color` property! Use this if you want to make every letter colorful using Starbound carets (like `"specialName": "^#D19B31;Ar^#AB544B;ca^#8A8CBF;na^reset;"`) or change the mod's name appearance;
-- **`aliases`** (Optional): *Array of strings*, shortnames for players to type into the `/tip <name>` command;
-- **`tips`** (Optional): *Array of strings*, tips supports Starbound inline caret colors! Keep them under ~120 characters for clean wrapping on loading screens.
+- **`checkPath`** / **`checkPaths`** (Required unless using `checkAnyPath` or `alwaysActive`): *String* OR *Array of strings*. Checked to verify *whether the target mod(s) are installed on the player's side.*
+  - If `checkPaths` array is given: passes if *all* the listed paths exist (AND logic - e.g. for tips about mods compatibility and such).
+  - if `checkAnyPath` array is given: passes if *at least one* listed path exists (OR logic - e.g. useful for a Lite/Full mod editions). Can be combined with a singular `checkPath` for whatever reason???
+  - If `"*"` is given: passes immediately.
+- **`alwaysActive`** (Optional): *Boolean*. If `true`, skips all path checks and always loads this category's tips.
+- **`color`** (Optional): *String*. Hex code (`"ff9933"` or `"#ff9933"`, supports 3/4/6/8-digit hex) to apply a plain color to your mod's name. Defaults to `"ffffff"`.
+- **`specialName`** (Optional): *String*. A high-priority key that **overrides** the `color` property! Allows to customize the mod's display name and color it per-character.
+- **`aliases`** (Optional): *Array of strings*. Shortnames for players to type into the `/tip <category>` command. Case-insensitive; reserved names (simply commands) and aliases already claimed by an earlier mod (sorted alphabetically) are skipped.
+- **`tips`** (Required): *Array of strings*. Supports Starbound inline caret colors (named colors like `^cyan;`, 3/4/6/8-digit `^#hex;`, and `^reset;`; unsupported tags are automatically stripped). Keep them under ~120 characters for clean wrapping on loading screens.
+
+> **Note:** On OpenStarbound, any popular asset extension (`.png`, `.ogg`, `.lua`, etc.) works; yet in case the game misbehaves - switch to JSON-based files (`.object`, `.item`, `.species`, etc.).
+
 
 ### Overriding existing stuff
 
-You can easily create `replace` patches to customize other mods' configurations or add new aliases to them in one patch.
+You can easily create patches to customize other mods' tips or add something new to them in one patch.
 
 ```json
 [

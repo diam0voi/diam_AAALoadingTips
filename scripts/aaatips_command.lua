@@ -116,7 +116,7 @@ local function stripOsbTags(text)
 	return (text:gsub("%^[^;%s]+;", ""))
 end
 
-local function isModInstalled(checkPath)
+local function isModInstalled(checkPath, pathCache)
 	if type(checkPath) ~= "string" then
 		return false
 	end
@@ -131,34 +131,90 @@ local function isModInstalled(checkPath)
 		checkPath = "/" .. checkPath
 	end
 
+	if pathCache and pathCache[checkPath] ~= nil then
+		return pathCache[checkPath]
+	end
+
+	local found = false
+
 	if root.assetsScan then
 		local ok, list = pcall(root.assetsScan, checkPath)
 		if ok and type(list) == "table" then
+			local lCheck = string.lower(checkPath)
 			for _, path in ipairs(list) do
-				if path == checkPath then
-					return true
+				if string.lower(path) == lCheck then
+					found = true
+					break
 				end
 			end
 		end
+	else
+		-- vanilla fallback w/o assetsScan
+		local ext = checkPath:match("%.([^./]+)$")
+		ext = ext and string.lower(ext) or ""
+
+		if ext == "png" then
+			local ok, res = pcall(root.imageSize, checkPath)
+			found = ok and type(res) == "table" and type(res[1]) == "number" and res[1] > 0
+		elseif ext ~= "" and not nonJsonExts[ext] then
+			local ok, res = pcall(root.assetJson, checkPath)
+			-- if it isnt an engine error container...
+			found = ok and type(res) == "table" and next(res) ~= nil and not res.exception and not res.error
+		end
+	end
+
+	if pathCache then
+		pathCache[checkPath] = found
+	end
+	return found
+end
+
+local function collectPaths(field, out)
+	if type(field) == "string" then
+		table.insert(out, field)
+	elseif type(field) == "table" then
+		for _, p in ipairs(field) do
+			table.insert(out, p)
+		end
+	end
+end
+
+local function areModChecksMet(mod, pathCache)
+	if mod.alwaysActive == true then
+		return true
+	end
+
+	local requiredPaths = {}
+	collectPaths(mod.checkPath, requiredPaths)
+	collectPaths(mod.checkPaths, requiredPaths)
+
+	local anyPaths = {}
+	collectPaths(mod.checkAnyPath, anyPaths)
+
+	if #requiredPaths == 0 and #anyPaths == 0 then
 		return false
 	end
 
-	-- vanilla fallback w/o assetsScan
-	local ext = checkPath:match("%.([^./]+)$")
-	ext = ext and string.lower(ext) or ""
-
-	if ext == "png" then
-		local ok, res = pcall(root.imageSize, checkPath)
-		return ok and type(res) == "table" and type(res[1]) == "number" and res[1] > 0
+	for _, p in ipairs(requiredPaths) do
+		if not isModInstalled(p, pathCache) then
+			return false
+		end
 	end
 
-	if ext ~= "" and not nonJsonExts[ext] then
-		local ok, res = pcall(root.assetJson, checkPath)
-		-- if it isnt an engine error container...
-		return ok and type(res) == "table" and next(res) ~= nil and not res.exception and not res.error
+	if #anyPaths > 0 then
+		local anyFound = false
+		for _, p in ipairs(anyPaths) do
+			if isModInstalled(p, pathCache) then
+				anyFound = true
+				break
+			end
+		end
+		if not anyFound then
+			return false
+		end
 	end
 
-	return false
+	return true
 end
 
 local function registerAlias(rawAlias, targetKey, targetList, seenLocal)
@@ -256,9 +312,10 @@ local function buildTipPool()
 	end
 	table.sort(sortedModKeys)
 
+	local pathCache = {}
 	for _, modKey in ipairs(sortedModKeys) do
 		local mod = modTipsData[modKey]
-		if type(mod) == "table" and (mod.alwaysActive == true or isModInstalled(mod.checkPath)) then
+		if type(mod) == "table" and areModChecksMet(mod, pathCache) then
 			local coloredName
 			if type(mod.specialName) == "string" and trim(mod.specialName) ~= "" then
 				coloredName = mod.specialName .. "^reset;"
